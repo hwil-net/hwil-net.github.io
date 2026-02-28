@@ -1,12 +1,807 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home</title>
-</head>
-<body>
-    <h1>Hello World! This is a test for my new website.</h1>
-    <p>Welcome to my GitHub Pages site.</p>
-</body>
-</html>
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { Mountain, Github, Linkedin, Mail, BookOpen, Heart, Briefcase, GraduationCap, Ticket, ChevronRight, MapPin, AlertTriangle, ArrowUp } from 'lucide-react';
+import tripGroup from 'figma:asset/969e67ef4f9c22798de4312dfec8bebc1fdee632.png';
+import tripSummit from 'figma:asset/e12f85d9b05edd8df3e1def5ab6303572087637d.png';
+import tripClimbing from 'figma:asset/80e2bc9bea3187e8fb5b4f7157ea46566cc5038e.png';
+import tripHiroshima from 'figma:asset/b7512391620724e29ada64ef6dbdbb15153f2876.png';
+import craterSelfie from 'figma:asset/f0c1fe5e12bac0a91e7f385a29acd1107b562be1.png';
+import toriiGate from 'figma:asset/1ec9bc78b4711052d7195c71f0640c0ee5ef0174.png';
+import summitMarker from 'figma:asset/5cb686f6946549a603c917bb71a496b4c4435549.png';
+import headshot from 'figma:asset/7ddbad081daf786b588afa8d244c4ec3e503c4ce.png';
+import choirPhoto from 'figma:asset/561f353e124226d345082ead6d3633ca6a885926.png';
+import soccerPhoto from 'figma:asset/f1cc25ee635557a1ff4a76f5ea032068a1b984c9.png';
+import stadiumPhoto from 'figma:asset/4972144559faeb2e9ded4c83fd261a8a4dee1772.png';
+import kawsFigure from 'figma:asset/a51d48132c3a76dc09b5de75eb5f54a004468f0b.png';
+import squirrelPhoto from 'figma:asset/48447823d69d4357d2c3da7ba71eed0f18be09fb.png';
+
+const BLUE = '#00274C';
+const WHITE = '#FFFFFF';
+const TOTAL_HEIGHT = 670000;
+const cursiveFont = "'Caveat', cursive";
+
+// Confused avoidant face SVG icon for research section
+function ConfusedFace({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M8 8.5L9.5 10M9.5 8.5L8 10" />
+      <path d="M14.5 8.5L16 10M16 8.5L14.5 10" />
+      <path d="M8 15.5Q9.5 14 10.5 15.5Q11.5 17 12.5 15Q13.5 13 15 15" />
+      <path d="M17.5 6Q18.5 4 18 7" />
+    </svg>
+  );
+}
+
+// Generate a connected zigzag SVG path with rock-like edges
+function buildTrailPath(totalHeight: number): { mainPath: string; edgePaths: string[]; rockClusters: { cx: number; cy: number; rx: number; ry: number; rot: number }[] } {
+  const points: { x: number; y: number }[] = [];
+  const steps = 200;
+  const stepH = totalHeight / steps;
+
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    // Zigzag with multiple frequencies for organic feel
+    const swing = Math.sin(t * Math.PI * 12) * 140 +
+                  Math.sin(t * Math.PI * 5.3) * 80 +
+                  Math.sin(t * Math.PI * 22) * 30 +
+                  Math.cos(t * Math.PI * 8.7) * 50;
+    const x = 500 + swing; // center around 500 in a 1000-wide viewBox
+    const y = totalHeight - i * stepH;
+    points.push({ x, y });
+  }
+
+  // Build main path as a smooth curve through all points
+  let mainPath = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const next = points[i + 1];
+    const cpx1 = prev.x + (curr.x - prev.x) * 0.5;
+    const cpx2 = curr.x + (next.x - curr.x) * 0.5;
+    mainPath += ` Q ${cpx1} ${(prev.y + curr.y) / 2} ${curr.x} ${curr.y}`;
+  }
+  const last = points[points.length - 1];
+  mainPath += ` L ${last.x} ${last.y}`;
+
+  // Generate edge paths (rough edges on both sides of the trail)
+  const edgePaths: string[] = [];
+  for (let side = -1; side <= 1; side += 2) {
+    const offset = side * 60;
+    let edgePath = `M ${points[0].x + offset + Math.random() * 20} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      const jitter = (Math.sin(i * 3.7 + side * 2) * 15) + (Math.sin(i * 7.1) * 8);
+      const x = points[i].x + offset + jitter;
+      edgePath += ` L ${x} ${points[i].y}`;
+    }
+    edgePaths.push(edgePath);
+  }
+
+  // Rock clusters scattered along the path
+  const rockClusters: { cx: number; cy: number; rx: number; ry: number; rot: number }[] = [];
+  for (let i = 5; i < points.length; i += 3) {
+    const p = points[i];
+    const sideOff = (i % 2 === 0 ? 1 : -1) * (50 + Math.sin(i * 1.3) * 40);
+    rockClusters.push({
+      cx: p.x + sideOff,
+      cy: p.y,
+      rx: 15 + Math.abs(Math.sin(i * 2.1)) * 25,
+      ry: 10 + Math.abs(Math.cos(i * 1.7)) * 18,
+      rot: Math.sin(i * 0.9) * 30,
+    });
+  }
+
+  return { mainPath, edgePaths, rockClusters };
+}
+
+// Climbing Permit Screen — styled as a digital phone permit
+function ClimbingPermit({ onPurchase }: { onPurchase: () => void }) {
+  const [agreed, setAgreed] = useState(false);
+
+  // Get today's date formatted as YYYY.MM.DD
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+
+  const trailFacts = [
+    { icon: AlertTriangle, label: "Challenging Ascent", desc: "Considered the steepest trail, with a direct, rocky, and often difficult ascent to the summit." },
+    { icon: MapPin, label: "Highest Trailhead", desc: "Starts at the 5th Station (approx. 2,400m), making it the closest starting point to the summit." },
+    { icon: ArrowUp, label: "Direct Path", desc: "Unlike other trails, the Fujinomiya Trail often requires you to descend via the same path you ascended." },
+    { icon: Ticket, label: "Accessibility", desc: "Popular for hikers arriving from Western Japan via Shinkansen to Shin-Fuji station." },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: '#1a1a2e' }}>
+      {/* Subtle background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-5">
+        <svg viewBox="0 0 1000 600" className="absolute bottom-0 w-full" preserveAspectRatio="none">
+          <polygon points="0,600 200,200 350,320 500,80 650,300 800,180 1000,600" fill="white" />
+        </svg>
+      </div>
+
+      {/* Phone frame */}
+      <div className="relative w-full max-w-[420px]">
+        {/* Phone bezel */}
+        <div className="rounded-[2.5rem] p-3 shadow-2xl" style={{ backgroundColor: '#111' }}>
+          {/* Phone notch */}
+          <div className="flex justify-center mb-1">
+            <div className="w-28 h-6 rounded-b-2xl" style={{ backgroundColor: '#111' }} />
+          </div>
+
+          {/* Phone screen */}
+          <div className="rounded-[2rem] overflow-hidden overflow-y-auto" style={{ backgroundColor: '#f8f9fa', maxHeight: '80vh' }}>
+
+            {/* Top status bar */}
+            <div className="flex items-center justify-between px-6 pt-4 pb-2" style={{ backgroundColor: BLUE }}>
+              <span className="text-white/80" style={{ fontSize: '13px' }}>{dateStr.replace(/\./g, '/')}</span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-2.5 rounded-sm border border-white/60 relative">
+                  <div className="absolute inset-0.5 rounded-[1px]" style={{ backgroundColor: 'rgba(255,255,255,0.7)', width: '70%' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Shizuoka Prefecture header */}
+            <div className="px-6 pt-5 pb-4 text-center flex flex-col items-center gap-2" style={{ backgroundColor: BLUE }}>
+              <p className="text-white/80" style={{ fontSize: '15px', letterSpacing: '0.05em' }}>Shizuoka Prefecture</p>
+              <h1 className="text-white font-bold" style={{ fontSize: '22px', lineHeight: '1.3' }}>
+                Mt. Fuji Climbing Permit
+              </h1>
+              <h2 className="font-bold" style={{ color: 'rgba(255,255,255,0.9)', fontSize: '17px' }}>
+                Fujinomiya Trail (Overnight Hike)
+              </h2>
+            </div>
+
+            {/* White content area */}
+            <div className="px-6 py-5 flex flex-col gap-5" style={{ backgroundColor: WHITE }}>
+
+              {/* Detail section */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-5 rounded-full" style={{ backgroundColor: BLUE }} />
+                  <p className="font-bold" style={{ color: BLUE, fontSize: '16px' }}>Detail</p>
+                </div>
+
+                <div className="flex flex-col gap-2 pl-3">
+                  <div className="flex justify-between items-center py-2 border-b" style={{ borderColor: '#e5e7eb' }}>
+                    <span style={{ color: '#6b7280', fontFamily: cursiveFont, fontSize: '18px' }}>Date</span>
+                    <span className="font-bold" style={{ color: BLUE, fontSize: '18px' }}>{dateStr}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b" style={{ borderColor: '#e5e7eb' }}>
+                    <span style={{ color: '#6b7280', fontFamily: cursiveFont, fontSize: '18px' }}>Trail</span>
+                    <span className="font-bold" style={{ color: BLUE, fontSize: '15px' }}>Fujinomiya (South Side)</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b" style={{ borderColor: '#e5e7eb' }}>
+                    <span style={{ color: '#6b7280', fontFamily: cursiveFont, fontSize: '18px' }}>Climber</span>
+                    <span className="font-bold" style={{ color: BLUE, fontSize: '15px' }}>Harold Wilson</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b" style={{ borderColor: '#e5e7eb' }}>
+                    <span style={{ color: '#6b7280', fontFamily: cursiveFont, fontSize: '18px' }}>Start</span>
+                    <span className="font-bold" style={{ color: BLUE, fontSize: '15px' }}>5th Station (2,400m)</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span style={{ color: '#6b7280', fontFamily: cursiveFont, fontSize: '18px' }}>Summit</span>
+                    <span className="font-bold" style={{ color: BLUE, fontSize: '15px' }}>Kengamine (3,776m)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* QR Code section */}
+              <div className="flex flex-col items-center gap-3 py-4">
+                <div className="p-3 rounded-xl border" style={{ borderColor: '#e5e7eb' }}>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https://hwil.net&color=00274C`}
+                    alt="QR code to hwil.net"
+                    className="w-32 h-32"
+                  />
+                </div>
+                <p className="font-bold" style={{ color: BLUE, fontSize: '14px' }}>hwil.net</p>
+              </div>
+
+              {/* Staff message */}
+              <div className="rounded-lg p-4 text-center" style={{ backgroundColor: '#fef3cd', border: '1px solid #ffc107' }}>
+                <p style={{ color: '#664d03', fontFamily: cursiveFont, fontSize: '17px', lineHeight: '1.5' }}>
+                  Please show this screen to the staff. We recommend that you save a screenshot of this screen as an image just in case.
+                </p>
+              </div>
+
+              {/* Trail characteristics — collapsed into compact list */}
+              <div className="flex flex-col gap-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-5 rounded-full" style={{ backgroundColor: BLUE }} />
+                  <p className="font-bold" style={{ color: BLUE, fontSize: '16px' }}>Trail Characteristics</p>
+                </div>
+                {trailFacts.map((fact) => (
+                  <div key={fact.label} className="flex items-start gap-2.5 pl-3">
+                    <fact.icon className="w-4 h-4 shrink-0 mt-0.5" style={{ color: BLUE }} />
+                    <div>
+                      <span className="font-bold" style={{ color: BLUE, fontSize: '14px' }}>{fact.label}: </span>
+                      <span style={{ color: '#4b5563', fontFamily: cursiveFont, fontSize: '16px', lineHeight: '1.3' }}>{fact.desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Prince Route */}
+              <div className="rounded-lg p-3 border flex flex-col gap-1" style={{ borderColor: `${BLUE}20`, backgroundColor: `${BLUE}04` }}>
+                <p className="font-bold" style={{ color: BLUE, fontSize: '14px' }}>Prince Route</p>
+                <p style={{ color: '#4b5563', fontFamily: cursiveFont, fontSize: '16px', lineHeight: '1.3' }}>
+                  A portion of the Fujinomiya trail can be combined with the Gotemba trail to create the "Prince Route" — a route that follows a path taken by the Emperor of Japan in 2008.
+                </p>
+              </div>
+
+              {/* Acknowledgment + Button */}
+              <label className="flex items-start gap-3 cursor-pointer min-h-[48px] p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-1 w-5 h-5 shrink-0 accent-[#00274C]"
+                />
+                <span style={{ color: '#374151', fontFamily: cursiveFont, fontSize: '17px', lineHeight: '1.4' }}>
+                  I understand that the Fujinomiya Trail is the steepest route on Mt. Fuji and that I will scroll through volcanic terrain to reach Harold's summit profile.
+                </span>
+              </label>
+
+              <button
+                onClick={onPurchase}
+                disabled={!agreed}
+                className="flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-bold text-white transition-all min-h-[56px] w-full"
+                style={{
+                  backgroundColor: agreed ? BLUE : `${BLUE}40`,
+                  cursor: agreed ? 'pointer' : 'not-allowed',
+                  fontSize: '17px',
+                }}
+              >
+                <Ticket className="w-5 h-5" />
+                <span>Purchase Climbing Permit</span>
+                <ChevronRight className="w-5 h-5" />
+              </button>
+
+              <p className="text-center" style={{ color: '#9ca3af', fontFamily: cursiveFont, fontSize: '15px' }}>
+                Free of charge. Your only currency is curiosity and scroll stamina.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  const [permitPurchased, setPermitPurchased] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [elevation, setElevation] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hasInitialized = useRef(false);
+
+  useEffect(() => {
+    if (!permitPurchased) return;
+    const handleScroll = () => {
+      if (containerRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+        const maxScroll = scrollHeight - clientHeight;
+        const progress = maxScroll > 0 ? ((maxScroll - scrollTop) / maxScroll) * 100 : 0;
+        setScrollProgress(progress);
+        setElevation(Math.floor((progress / 100) * 3776));
+      }
+    };
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      if (!hasInitialized.current) {
+        requestAnimationFrame(() => {
+          if (container) {
+            container.scrollTop = container.scrollHeight - container.clientHeight;
+            hasInitialized.current = true;
+          }
+        });
+      }
+    }
+    return () => { if (container) container.removeEventListener('scroll', handleScroll); };
+  }, [permitPurchased]);
+
+  // Build trail data once
+  const trailData = useMemo(() => buildTrailPath(TOTAL_HEIGHT), []);
+
+  const tripPhotos = [
+    { src: tripGroup, caption: "Our hiking group on the volcanic slopes", bottom: 18000, side: "left" as const },
+    { src: squirrelPhoto, caption: "An Ann Arbor squirrel enjoying some berries", bottom: 65000, side: "right" as const },
+    { src: soccerPhoto, caption: "Competitive soccer, one of my favorite ways to stay active", bottom: 115000, side: "left" as const },
+    { src: toriiGate, caption: "Itsukushima Shrine floating torii gate", bottom: 170000, side: "right" as const },
+    { src: choirPhoto, caption: "Performing with the Japanese choir", bottom: 225000, side: "left" as const },
+    { src: kawsFigure, caption: "KAWS figure at Detroit Campus Martius", bottom: 285000, side: "right" as const },
+    { src: tripHiroshima, caption: "Hiroshima Peace Memorial, a humbling visit", bottom: 340000, side: "left" as const },
+    { src: stadiumPhoto, caption: "Edion Peace Wing stadium in Hiroshima", bottom: 395000, side: "right" as const },
+    { src: craterSelfie, caption: "Looking into the volcanic crater at the summit", bottom: 450000, side: "left" as const },
+    { src: tripClimbing, caption: "Final push above the clouds", bottom: 520000, side: "right" as const },
+    { src: summitMarker, caption: "The highest point in Japan, 3,776 meters", bottom: 590000, side: "left" as const },
+  ];
+
+  // Fujinomiya Trail stations
+  const stations = [
+    { bottom: 45000, label: "5th Station — Fujinomiya Trailhead", elev: "2,400m", msg: "The highest trailhead on Mt. Fuji. Steep volcanic rock begins immediately." },
+    { bottom: 140000, label: "6th Station — New 6th", elev: "2,490m", msg: "The first mountain hut. Already above the clouds on clear days." },
+    { bottom: 200000, label: "New 7th Station", elev: "2,780m", msg: "Rocky switchbacks steepen. The direct Fujinomiya ascent shows its character." },
+    { bottom: 260000, label: "Old 7th Station (3,010m)", elev: "3,010m", msg: "Named for the original hut location. Thin air. Slow and steady." },
+    { bottom: 365000, label: "8th Station", elev: "3,250m", msg: "The steepest section. Loose volcanic scree underfoot." },
+    { bottom: 475000, label: "9th Station", elev: "3,460m", msg: "The summit crater rim is visible. One final rocky push." },
+    { bottom: 560000, label: "9.5th Station — Torii Gate", elev: "3,590m", msg: "You pass through the sacred gate. The peak of Kengamine awaits." },
+  ];
+
+  if (!permitPurchased) {
+    return <ClimbingPermit onPurchase={() => setPermitPurchased(true)} />;
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="h-screen w-full overflow-y-scroll overflow-x-hidden relative"
+      style={{ background: `linear-gradient(to bottom, #b8d4e8, #5a7d99, ${BLUE}, ${BLUE}ee, #0a0f1a)` }}
+    >
+      {/* Fixed Progress Bar */}
+      <div
+        className="fixed top-0 left-0 right-0 z-50 px-5 py-3 border-b"
+        style={{ backgroundColor: BLUE, borderColor: 'rgba(255,255,255,0.15)' }}
+      >
+        <div className="max-w-5xl mx-auto flex items-center gap-4">
+          <Mountain className="w-5 h-5 shrink-0" style={{ color: WHITE }} />
+          <span className="font-bold text-white whitespace-nowrap">Harold Wilson</span>
+          <span className="hidden md:inline text-xs text-white/70 whitespace-nowrap">
+            Startup Operator &amp; Growth Associate | Aspiring Founder | Pitching &amp; Product Strategy
+          </span>
+          <div className="flex-1 flex items-center gap-3 ml-auto">
+            <span className="text-sm text-white/70 whitespace-nowrap" style={{ fontFamily: cursiveFont }}>{elevation.toLocaleString()}m</span>
+            <div className="flex-1 h-2.5 rounded-full overflow-hidden min-w-[80px]" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+              <div
+                className="h-full rounded-full transition-all duration-200"
+                style={{ width: `${scrollProgress}%`, backgroundColor: WHITE }}
+              />
+            </div>
+            <span className="text-sm text-white/70 whitespace-nowrap" style={{ fontFamily: cursiveFont }}>{Math.round(scrollProgress)}%</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative w-full" style={{ height: `${TOTAL_HEIGHT}px` }}>
+
+        {/* Connected zigzag volcanic trail — SVG rendered */}
+        <svg
+          className="absolute inset-0 w-full pointer-events-none z-[1]"
+          viewBox={`0 0 1000 ${TOTAL_HEIGHT}`}
+          preserveAspectRatio="none"
+          style={{ height: `${TOTAL_HEIGHT}px` }}
+        >
+          <defs>
+            {/* Rock texture filter */}
+            <filter id="rockNoise">
+              <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="4" seed="42" />
+              <feColorMatrix type="saturate" values="0" />
+              <feComponentTransfer>
+                <feFuncA type="linear" slope="0.3" />
+              </feComponentTransfer>
+              <feBlend in="SourceGraphic" mode="multiply" />
+            </filter>
+            <filter id="roughEdge">
+              <feTurbulence type="turbulence" baseFrequency="0.015" numOctaves="3" seed="7" />
+              <feDisplacementMap in="SourceGraphic" scale="12" />
+            </filter>
+          </defs>
+
+          {/* Wide trail body — main fill */}
+          <path
+            d={trailData.mainPath}
+            fill="none"
+            stroke="rgba(42,32,24,0.92)"
+            strokeWidth="130"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            filter="url(#roughEdge)"
+          />
+          {/* Secondary trail layer — darker center */}
+          <path
+            d={trailData.mainPath}
+            fill="none"
+            stroke="rgba(35,26,20,0.85)"
+            strokeWidth="80"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {/* Trail center groove — lighter worn path */}
+          <path
+            d={trailData.mainPath}
+            fill="none"
+            stroke="rgba(60,48,38,0.6)"
+            strokeWidth="30"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray="40 20 80 30"
+          />
+          {/* Trail edge highlights — rough borders */}
+          {trailData.edgePaths.map((ep, idx) => (
+            <path
+              key={`edge-${idx}`}
+              d={ep}
+              fill="none"
+              stroke={`rgba(75,58,45,${0.5 + idx * 0.15})`}
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeDasharray="12 8 20 6"
+            />
+          ))}
+          {/* Rock clusters scattered along the trail */}
+          {trailData.rockClusters.map((rock, idx) => (
+            <g key={`rock-${idx}`} transform={`rotate(${rock.rot} ${rock.cx} ${rock.cy})`}>
+              <ellipse
+                cx={rock.cx}
+                cy={rock.cy}
+                rx={rock.rx}
+                ry={rock.ry}
+                fill={`rgba(${48 + (idx % 5) * 6},${38 + (idx % 3) * 4},${28 + (idx % 4) * 3},${0.5 + (idx % 3) * 0.12})`}
+              />
+              {/* Highlight on rock */}
+              <ellipse
+                cx={rock.cx - rock.rx * 0.2}
+                cy={rock.cy - rock.ry * 0.3}
+                rx={rock.rx * 0.4}
+                ry={rock.ry * 0.3}
+                fill={`rgba(80,65,50,${0.15 + (idx % 4) * 0.05})`}
+              />
+            </g>
+          ))}
+          {/* Extra scattered small pebbles along the entire path */}
+          {Array.from({ length: 300 }, (_, i) => {
+            const t = i / 300;
+            const pathY = TOTAL_HEIGHT - t * TOTAL_HEIGHT;
+            const swing = Math.sin(t * Math.PI * 12) * 140 + Math.sin(t * Math.PI * 5.3) * 80;
+            const pathX = 500 + swing;
+            const offX = (Math.sin(i * 7.3) * 70) + (Math.cos(i * 3.1) * 30);
+            const r = 3 + Math.abs(Math.sin(i * 2.7)) * 6;
+            return (
+              <circle
+                key={`peb-${i}`}
+                cx={pathX + offX}
+                cy={pathY}
+                r={r}
+                fill={`rgba(${50 + (i % 6) * 5},${40 + (i % 4) * 4},${30 + (i % 5) * 3},${0.35 + (i % 3) * 0.1})`}
+              />
+            );
+          })}
+        </svg>
+
+        {/* Side mountain walls */}
+        <div
+          className="absolute left-0 w-[30%] z-0 pointer-events-none"
+          style={{
+            bottom: 0,
+            height: `${TOTAL_HEIGHT - 3000}px`,
+            background: `
+              repeating-linear-gradient(172deg, rgba(35,28,22,0.45) 0px, rgba(25,20,16,0.3) 300px, rgba(42,34,26,0.4) 500px, rgba(30,24,18,0.35) 700px),
+              radial-gradient(ellipse at 80% 50%, rgba(45,35,28,0.3) 0%, transparent 70%)
+            `,
+          }}
+        />
+        <div
+          className="absolute right-0 w-[30%] z-0 pointer-events-none"
+          style={{
+            bottom: 0,
+            height: `${TOTAL_HEIGHT - 3000}px`,
+            background: `
+              repeating-linear-gradient(188deg, rgba(35,28,22,0.45) 0px, rgba(25,20,16,0.3) 300px, rgba(42,34,26,0.4) 500px, rgba(30,24,18,0.35) 700px),
+              radial-gradient(ellipse at 20% 50%, rgba(45,35,28,0.3) 0%, transparent 70%)
+            `,
+          }}
+        />
+
+        {/* Base Camp */}
+        <div
+          className="absolute bottom-0 w-full h-[4000px] flex items-end justify-center pb-32 z-10"
+          style={{ background: `linear-gradient(to top, #0a0f1a, ${BLUE}ee, transparent)` }}
+        >
+          <div className="text-center z-10 px-6 max-w-xl flex flex-col items-center gap-4">
+            <h2 className="text-4xl sm:text-5xl font-bold" style={{ color: WHITE }}>Base Camp — 2,400m</h2>
+            <p style={{ color: 'rgba(255,255,255,0.9)', fontFamily: cursiveFont, fontSize: '24px' }}>Fujinomiya 5th Station. The steepest trail on Mt. Fuji begins here.</p>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontFamily: cursiveFont, fontSize: '22px' }}>Scroll up through 1,376 meters of volcanic rock to reach the summit</p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontFamily: cursiveFont, fontSize: '18px' }}>Go Blue. The climb is long and intentional, just like getting to know someone.</p>
+          </div>
+        </div>
+
+        {/* Trip photo cards */}
+        {tripPhotos.map((photo, i) => (
+          <div
+            key={`trip-${i}`}
+            className="absolute z-20"
+            style={{
+              bottom: `${photo.bottom}px`,
+              ...(photo.side === 'left' ? { left: '2%' } : { right: '2%' }),
+            }}
+          >
+            <div
+              className="rounded-2xl shadow-2xl overflow-hidden border-2 flex flex-col"
+              style={{ borderColor: 'rgba(255,255,255,0.3)', backgroundColor: 'rgba(255,255,255,0.97)', width: 'clamp(380px, 40vw, 560px)' }}
+            >
+              <img
+                src={photo.src}
+                alt={photo.caption}
+                className="w-full object-cover"
+                style={{ height: 'clamp(300px, 30vw, 420px)' }}
+              />
+              <div className="px-6 py-5" style={{ backgroundColor: WHITE }}>
+                <p style={{ color: BLUE, fontFamily: cursiveFont, fontSize: '22px' }}>{photo.caption}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Station markers */}
+        {stations.map((station, i) => (
+          <div
+            key={`station-${i}`}
+            className="absolute left-1/2 -translate-x-1/2 z-20"
+            style={{ bottom: `${station.bottom}px` }}
+          >
+            <div
+              className="px-8 py-6 rounded-xl text-center max-w-md border flex flex-col items-center gap-2"
+              style={{ backgroundColor: `${BLUE}ee`, borderColor: 'rgba(255,255,255,0.25)' }}
+            >
+              <p className="text-xl font-bold" style={{ color: WHITE }}>{station.label}</p>
+              <p style={{ color: 'rgba(255,255,255,0.9)', fontFamily: cursiveFont, fontSize: '22px' }}>{station.elev} Elevation</p>
+              <p style={{ color: 'rgba(255,255,255,0.7)', fontFamily: cursiveFont, fontSize: '18px' }}>{station.msg}</p>
+            </div>
+          </div>
+        ))}
+
+        {/* ============ SUMMIT SECTION ============ */}
+        <div
+          className="absolute top-0 w-full px-4 py-24 sm:py-28 z-20"
+          style={{ background: 'linear-gradient(to bottom, #d4e5f0, #b8d4e8, transparent)' }}
+        >
+          <div className="max-w-3xl mx-auto flex flex-col gap-10">
+
+            {/* Summit header */}
+            <div className="text-center flex flex-col items-center gap-2">
+              <h1 className="text-3xl sm:text-4xl font-bold" style={{ color: BLUE }}>Congrats! You reached the summit.</h1>
+              <p style={{ color: `${BLUE}cc`, fontFamily: cursiveFont, fontSize: '24px' }}>3,776m above sea level — Kengamine Peak</p>
+            </div>
+
+            {/* Profile Card */}
+            <div
+              className="rounded-2xl shadow-xl p-8 sm:p-10 flex flex-col gap-10 border-t-4"
+              style={{ backgroundColor: WHITE, borderTopColor: BLUE }}
+            >
+
+              {/* Profile header */}
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div
+                  className="w-36 h-36 sm:w-40 sm:h-40 rounded-full shadow-lg overflow-hidden shrink-0 border-4"
+                  style={{ borderColor: BLUE }}
+                >
+                  <img src={headshot} alt="Harold Wilson" className="w-full h-full object-cover" />
+                </div>
+                <div className="text-center sm:text-left flex flex-col gap-1">
+                  <h2 className="text-3xl sm:text-4xl font-bold" style={{ color: BLUE }}>Harold Wilson</h2>
+                  <p style={{ color: '#4a5568', fontFamily: cursiveFont, fontSize: '20px' }}>University of Michigan — School of Information</p>
+                  <p style={{ color: '#718096', fontFamily: cursiveFont, fontSize: '18px' }}>Information Science with an Information Analysis Focus</p>
+                  <p style={{ color: '#718096', fontFamily: cursiveFont, fontSize: '18px' }}>Human-Centered Artificial Intelligence Minor</p>
+                </div>
+              </div>
+
+              {/* Social Links */}
+              <div className="flex flex-wrap justify-center sm:justify-start gap-3">
+                <a href="https://github.com/" className="flex items-center gap-2 text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity min-h-[48px]" style={{ backgroundColor: BLUE }}>
+                  <Github className="w-5 h-5" />
+                  <span style={{ fontFamily: cursiveFont, fontSize: '18px' }}>GitHub</span>
+                </a>
+                <a href="https://www.linkedin.com/in/hazol/" className="flex items-center gap-2 text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity min-h-[48px]" style={{ backgroundColor: '#0077B5' }}>
+                  <Linkedin className="w-5 h-5" />
+                  <span style={{ fontFamily: cursiveFont, fontSize: '18px' }}>LinkedIn</span>
+                </a>
+                <a href="mailto:hwil@umich.edu" className="flex items-center gap-2 px-6 py-3 rounded-lg hover:opacity-90 transition-opacity min-h-[48px]" style={{ backgroundColor: BLUE, color: WHITE }}>
+                  <Mail className="w-5 h-5" />
+                  <span style={{ fontFamily: cursiveFont, fontSize: '18px' }}>hwil@umich.edu</span>
+                </a>
+              </div>
+
+              {/* About Me */}
+              <section className="flex flex-col gap-4">
+                <h3 className="text-2xl font-bold flex items-center gap-3" style={{ color: BLUE }}>
+                  <BookOpen className="w-6 h-6" style={{ color: BLUE }} />
+                  About Me — Why Research
+                </h3>
+                <div className="flex flex-col gap-4" style={{ color: '#374151', fontFamily: cursiveFont, fontSize: '20px', lineHeight: '1.7' }}>
+                  <p>I view research as the ideal setting to develop and refine critical thinking skills while working to create new knowledge.</p>
+                  <p>The focus on what I can do for others and to better understand the needs of people has been one of my goals since moving to Ann Arbor.</p>
+                </div>
+              </section>
+
+              <hr className="border-slate-200" />
+
+              {/* Faith and Service */}
+              <section className="flex flex-col gap-4">
+                <h3 className="text-2xl font-bold flex items-center gap-3" style={{ color: BLUE }}>
+                  <Heart className="w-6 h-6" style={{ color: BLUE }} />
+                  Faith and Service
+                </h3>
+                <div className="flex flex-col gap-4" style={{ color: '#374151', fontFamily: cursiveFont, fontSize: '20px', lineHeight: '1.7' }}>
+                  <p>In my church family, I have had countless opportunities to serve others even from the age of ten. I have many memorable experiences of feeding the homeless in Detroit. When helping others, there is a feeling of fulfillment in oneself, and that is an outcome of serving others with our golden rule of treating others the way you would like to be treated.</p>
+                  <p>One of the teachings I learned in church from a young age — and one that can be overlooked — is that all humans have the same intrinsic value, no matter the status, race, health, intelligence, or any other metric by which we judge others.</p>
+                  <p>While my faith is paramount to who I am, I also enjoy speaking to others of different religion, or even no religion at all, and understanding their perspective while being respectful of their view. My place in my church family is one of service and love for all others.</p>
+                </div>
+              </section>
+
+              <hr className="border-slate-200" />
+
+              {/* Current Research */}
+              <section className="flex flex-col gap-4">
+                <h3 className="text-2xl font-bold flex items-center gap-3" style={{ color: BLUE }}>
+                  <ConfusedFace className="w-6 h-6" style={{ color: BLUE }} />
+                  Current Research — LLMs and Interpersonal Uncertainty
+                </h3>
+                <div
+                  className="rounded-lg p-4 border"
+                  style={{ backgroundColor: `${BLUE}08`, borderColor: `${BLUE}20`, color: BLUE, fontFamily: cursiveFont, fontSize: '18px' }}
+                >
+                  Research Assistant, University of Michigan School of Information (January 2026 — Present). Mentor: PhD Candidate Zoe Natalia Cullen, assisting on in-progress dissertation about AI-Mediated Communication and Human-AI Interaction.
+                </div>
+                <div className="flex flex-col gap-4" style={{ color: '#374151', fontFamily: cursiveFont, fontSize: '20px', lineHeight: '1.7' }}>
+                  <p className="font-bold" style={{ color: BLUE }}>My role on this project so far:</p>
+                  <ul className="list-disc list-inside flex flex-col gap-2 pl-2" style={{ color: '#4b5563' }}>
+                    <li>Assisting with the literature review on AI-mediated communication and attributional processes</li>
+                    <li>Cleaning and processing data from participant interviews and LLM transcripts</li>
+                    <li>Coding interview and LLM transcripts for thematic analysis</li>
+                  </ul>
+                </div>
+              </section>
+
+              <hr className="border-slate-200" />
+
+              {/* Professional Experience */}
+              <section className="flex flex-col gap-6">
+                <h3 className="text-2xl font-bold flex items-center gap-3" style={{ color: BLUE }}>
+                  <Briefcase className="w-6 h-6" style={{ color: BLUE }} />
+                  Professional Experience
+                </h3>
+                <div className="flex flex-col gap-4">
+                  <div className="border rounded-xl p-6 border-slate-200 flex flex-col gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
+                      <div>
+                        <h4 className="font-bold" style={{ color: BLUE }}>Associate PV System Designer</h4>
+                        <p style={{ color: '#4a5568', fontFamily: cursiveFont, fontSize: '18px' }}>Sunrun — Residential Solar Installations (Remote)</p>
+                      </div>
+                      <p style={{ color: '#718096', fontFamily: cursiveFont, fontSize: '16px', whiteSpace: 'nowrap' }}>Mar 2023 — Sep 2023</p>
+                    </div>
+                    <ul className="list-disc list-inside flex flex-col gap-2" style={{ color: '#4b5563', fontFamily: cursiveFont, fontSize: '18px', lineHeight: '1.6' }}>
+                      <li>Partnered with engineering and sales teams to design and deliver 30+ custom solar energy solutions, resulting in a 20% increase in customer satisfaction scores and boosting deal closure rates by 15%</li>
+                      <li>Reviewed and evaluated site images for over 40 solar installation projects, providing detailed recommendations on fire safety and structural integrity; improved proposal accuracy by 25%</li>
+                      <li>Leveraged Sunrun BrightPath to design and iterate detailed PV installation plans, achieving a 20% reduction in design time and boosting technical accuracy</li>
+                    </ul>
+                  </div>
+
+                  <div className="border rounded-xl p-6 border-slate-200 flex flex-col gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
+                      <div>
+                        <h4 className="font-bold" style={{ color: BLUE }}>CAD Operator / Fire Alarm Designer</h4>
+                        <p style={{ color: '#4a5568', fontFamily: cursiveFont, fontSize: '18px' }}>National Time and Signal — Fire Alarms (Wixom, MI)</p>
+                      </div>
+                      <p style={{ color: '#718096', fontFamily: cursiveFont, fontSize: '16px', whiteSpace: 'nowrap' }}>Mar 2022 — Jan 2023</p>
+                    </div>
+                    <ul className="list-disc list-inside flex flex-col gap-2" style={{ color: '#4b5563', fontFamily: cursiveFont, fontSize: '18px', lineHeight: '1.6' }}>
+                      <li>Collaborated closely with customers and cross-functional teams to clarify and resolve project details, contributing to the completion of 50+ fire alarm installations</li>
+                      <li>Mastered updates to fire alarm building codes through 20+ hours of annual professional development, achieving a 100% pass rate on safety inspections</li>
+                      <li>Produced and reviewed AutoCAD shop drawings for compliance and installation efficiency</li>
+                      <li>Trained 3 new technicians on fire alarm standards and documentation procedures, increasing team productivity by 10%</li>
+                    </ul>
+                  </div>
+                </div>
+              </section>
+
+              <hr className="border-slate-200" />
+
+              {/* Education */}
+              <section className="flex flex-col gap-6">
+                <h3 className="text-2xl font-bold flex items-center gap-3" style={{ color: BLUE }}>
+                  <GraduationCap className="w-6 h-6" style={{ color: BLUE }} />
+                  Education
+                </h3>
+                <div className="flex flex-col gap-4">
+                  <div className="border rounded-xl p-6 flex flex-col gap-1" style={{ borderColor: `${BLUE}30`, backgroundColor: `${BLUE}06` }}>
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
+                      <div>
+                        <h4 className="font-bold" style={{ color: BLUE }}>University of Michigan — Ann Arbor</h4>
+                        <p style={{ color: '#4a5568', fontFamily: cursiveFont, fontSize: '18px' }}>Pursuing a Bachelor of Science in Information, Information Analysis Focus</p>
+                        <p style={{ color: '#4a5568', fontFamily: cursiveFont, fontSize: '18px' }}>Human-Centered Artificial Intelligence Minor</p>
+                      </div>
+                      <p style={{ color: '#718096', fontFamily: cursiveFont, fontSize: '16px', whiteSpace: 'nowrap' }}>Expected May 2027</p>
+                    </div>
+                  </div>
+                  <div className="border rounded-xl p-6 border-slate-200 flex flex-col gap-1">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
+                      <div>
+                        <h4 className="font-bold" style={{ color: BLUE }}>Oakland Community College</h4>
+                        <p style={{ color: '#4a5568', fontFamily: cursiveFont, fontSize: '18px' }}>Associate in Applied Science, CAD Product Design Option</p>
+                      </div>
+                      <p style={{ color: '#718096', fontFamily: cursiveFont, fontSize: '16px', whiteSpace: 'nowrap' }}>May 2022</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <hr className="border-slate-200" />
+
+              {/* Skills and Interests */}
+              <section className="flex flex-col gap-4">
+                <h3 className="text-2xl font-bold" style={{ color: BLUE }}>Skills and Interests</h3>
+                <div className="flex flex-col gap-4">
+                  {[
+                    { label: 'Programming and Scripting', items: ['Python', 'Data Analysis', 'Automation', 'Statistics', 'Applied Machine Learning'] },
+                    { label: 'UX/UI Design Tools', items: ['Figma', 'Framer', 'Ideogram'] },
+                    { label: 'Data and Productivity', items: ['Microsoft Excel', 'PowerPoint', 'Word', 'SQLite / DB Browser', 'scipy', 'Panel Data Analysis'] },
+                    { label: 'Research', items: ['User Research', 'Interview Methods', 'Grounded Theory Coding', 'LLM Transcript Processing', 'Literature Review'] },
+                    { label: 'Languages and Interests', items: ['Conversational Japanese', 'Soccer', 'Running', 'Pickleball', 'Retro Gaming'] },
+                  ].map((group) => (
+                    <div key={group.label} className="flex flex-col gap-2">
+                      <h4 className="text-sm font-bold uppercase tracking-wide" style={{ color: '#718096' }}>{group.label}</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {group.items.map(s => (
+                          <span key={s} className="px-3 py-1.5 rounded-lg" style={{ backgroundColor: `${BLUE}0d`, color: BLUE, fontFamily: cursiveFont, fontSize: '17px' }}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <hr className="border-slate-200" />
+
+              {/* Trip Gallery */}
+              <section className="flex flex-col gap-4">
+                <h3 className="text-2xl font-bold flex items-center gap-3" style={{ color: BLUE }}>
+                  <Mountain className="w-6 h-6" style={{ color: BLUE }} />
+                  The Real Mt. Fuji Climb
+                </h3>
+                <p style={{ color: '#374151', fontFamily: cursiveFont, fontSize: '20px' }}>
+                  This website is inspired by the time this summer I climbed Mt. Fuji. Here are some photos from the trip and from life.
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[
+                    { src: tripGroup, caption: "Our gleeful group on the volcanic slopes" },
+                    { src: craterSelfie, caption: "The peak of Fuji-San, overlooking the volcanic crater" },
+                    { src: toriiGate, caption: "Itsukushima floating torii gate in Hiroshima" },
+                    { src: tripClimbing, caption: "Climbing above the cloud line" },
+                    { src: summitMarker, caption: "The highest point in Japan" },
+                    { src: tripSummit, caption: "Summit sunrise celebration" },
+                    { src: tripHiroshima, caption: "Hiroshima Peace Memorial" },
+                    { src: stadiumPhoto, caption: "The recently constructed Edion Peace Wing stadium, 1km from the epicenter" },
+                    { src: choirPhoto, caption: "Japanese choir performance for the Emperor's Birthday Reception" },
+                    { src: soccerPhoto, caption: "Mens competitive soccer match in Dearborn" },
+                    { src: kawsFigure, caption: "KAWS figure at Detroit Campus Martius" },
+                    { src: squirrelPhoto, caption: "An Ann Arbor squirrel enjoying some berries" },
+                  ].map((photo, i) => (
+                    <div key={`gallery-${i}`} className="rounded-xl overflow-hidden shadow-md border flex flex-col" style={{ borderColor: `${BLUE}15` }}>
+                      <img src={photo.src} alt={photo.caption} className="w-full h-36 sm:h-44 object-cover" />
+                      <div className="px-3 py-2 flex-1 flex items-start" style={{ backgroundColor: WHITE }}>
+                        <p style={{ color: BLUE, fontFamily: cursiveFont, fontSize: '16px' }}>{photo.caption}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+            </div>
+
+            {/* Footer */}
+            <div className="text-center py-6 flex flex-col items-center gap-2">
+              <p style={{ color: BLUE, fontFamily: cursiveFont, fontSize: '22px' }}>
+                Thank you for taking the time to climb the mountain and learn about me.
+              </p>
+              <p style={{ color: `${BLUE}88`, fontFamily: cursiveFont, fontSize: '18px' }}>
+                The journey matters as much as the destination. Go Blue.
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
